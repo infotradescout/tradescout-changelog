@@ -35,109 +35,109 @@ export const POSTS: Post[] = [
     id: "ts-weekly-apr-20",
     product: "tradescout",
     type: "weekly",
-    title: "TradeScout Weekly Digest — Apr 13–20, 2026",
+    title: "TradeScout — Week of Apr 13–20, 2026",
     summary:
-      "A massive week across the entire platform. The Exchange launched with a full seller dashboard, Direct Connect gained universal provider routing, and SEO was overhauled to target all local businesses — not just contractors.",
+      "A big week for TradeScout. We launched a full marketplace for buying and selling trade equipment, made it easier to connect with any type of local provider, and improved how the platform shows up in Google searches.",
     date: "2026-04-20",
     commitCount: 62,
     updates: [
       {
         id: "ts-w1",
         category: "feature",
-        title: "Exchange Seller Dashboard",
+        title: "Sellers Now Have Their Own Dashboard",
         description:
-          "Sellers now have a dedicated dashboard to manage active listings, view buyer inquiries, and mark items as sold.",
+          "If you sell equipment or supplies on TradeScout, you now have a dedicated space to manage your listings, see who's interested, and mark items as sold — all in one place.",
       },
       {
         id: "ts-w2",
         category: "feature",
-        title: "Inquiry → Conversation Thread",
+        title: "Buyer Questions Go Straight to a Chat",
         description:
-          "Buyer inquiries on Exchange listings automatically create a conversation thread and fire an in-app notification to the seller.",
+          "When a buyer asks about your listing, a conversation thread opens automatically and you get a notification right away — no more missing messages.",
       },
       {
         id: "ts-w3",
         category: "feature",
-        title: "NHTSA VIN Decoding",
+        title: "Instant Vehicle Details from a VIN",
         description:
-          "Vehicle listings now feature real-time VIN decoding via the NHTSA API — year, make, model, engine, and trim details pulled instantly.",
+          "Paste a vehicle's VIN number into a listing and TradeScout will automatically fill in the year, make, model, engine, and trim — no manual entry needed.",
       },
       {
         id: "ts-w4",
         category: "feature",
-        title: "Exchange Category Pages",
+        title: "Dedicated Pages for Every Listing Category",
         description:
-          "Tailored listing experiences, spec filters, and dedicated SEO-optimized pages for all 13 Exchange categories.",
+          "Each of the 13 marketplace categories now has its own page with relevant filters and search-friendly content, making it easier to find exactly what you're looking for.",
       },
       {
         id: "ts-w5",
         category: "feature",
-        title: "Direct Connect Universal Provider Routing",
+        title: "Direct Connect Works for All Provider Types",
         description:
-          "Direct Connect now routes jobs to all provider types — Contractors, Businesses, and Workers/Helpers.",
+          "When you submit a job request, TradeScout can now match you with contractors, local businesses, and individual workers — not just one type of provider.",
       },
       {
         id: "ts-w6",
         category: "feature",
-        title: "Workers as First-Class DC Responders",
+        title: "Workers and Helpers Can Now Receive Jobs",
         description:
-          "Helpers and workers now have a dedicated dashboard, public digital resumes, and the ability to receive Direct Connect jobs.",
+          "Individual workers and helpers now have their own profile pages and can receive job requests through Direct Connect, just like contractors and businesses.",
       },
       {
         id: "ts-w7",
         category: "feature",
-        title: "DC 6-Stage Lifecycle Rail",
+        title: "Clearer Job Request Progress Tracking",
         description:
-          "Introduced a 6-stage lifecycle for Direct Connect requests: Submitted → Routed → Awaiting → Active → Pending Outcome → Resolved.",
+          "Every Direct Connect job request now moves through six clear stages — from the moment you submit it to when it's fully resolved — so you always know where things stand.",
       },
       {
         id: "ts-w8",
         category: "feature",
-        title: "Scout → DC Handoff",
+        title: "Scout Can Start a Job Request for You",
         description:
-          "Scout can now seamlessly hand off a conversation into a pre-filled Direct Connect request, carrying over title, description, and urgency.",
+          "After chatting with Scout about a job, you can now send it straight into a Direct Connect request with all the details already filled in.",
       },
       {
         id: "ts-w9",
         category: "feature",
-        title: "Smart Onboarding Flow",
+        title: "Smoother Sign-Up Experience",
         description:
-          "New onboarding with provisional draft promotion, live verification status, Google Places integration, and DB-backed sessions.",
+          "The sign-up process is now faster and more guided, with real-time address lookup, clearer steps, and your progress saved along the way.",
       },
       {
         id: "ts-w10",
         category: "seo",
-        title: "Homepage & About Page Rewrite",
+        title: "Homepage Updated to Welcome All Local Businesses",
         description:
-          "Overhauled core messaging to target 'Find Any Local Business Near You', broadening appeal beyond contractors.",
+          "The homepage and About page now clearly communicate that TradeScout works for any local business — not just contractors — making it easier for new visitors to understand what we do.",
       },
       {
         id: "ts-w11",
         category: "seo",
-        title: "Exchange Sitemap Submitted to Google",
+        title: "Marketplace Listings Now Discoverable on Google",
         description:
-          "sitemap-exchange-listings.xml submitted to Google Search Console. Status: Success. 2 pages discovered on first read.",
+          "We submitted our marketplace sitemap to Google Search Console, so your listings can now start appearing in search results.",
       },
       {
         id: "ts-w12",
         category: "seo",
-        title: "Pensacola Launch Hub",
+        title: "Pensacola Now Has Its Own Local Hub",
         description:
-          "Dedicated service cluster pages, routing, and acquisition flows for the Pensacola market.",
+          "We launched dedicated pages for the Pensacola market, making it easier for local businesses and customers in that area to find and use TradeScout.",
       },
       {
         id: "ts-w13",
         category: "fix",
-        title: "49 Contract Tests Resolved",
+        title: "Reliability Improvements Across the Platform",
         description:
-          "Resolved 49 failing contract/integration tests and stabilized the TypeScript build across the platform.",
+          "We resolved a large batch of issues that were causing inconsistent behavior behind the scenes, resulting in a more stable and predictable experience throughout the app.",
       },
       {
         id: "ts-w14",
         category: "improvement",
-        title: "Map Intelligence",
+        title: "Scout Now Recommends Businesses on the Map",
         description:
-          "Added Scout-guided map recommendation actions, rationale, and a Google Maps admin geo-console.",
+          "Scout can now point you to specific businesses on the map and explain why it's recommending them, giving you more context before you reach out.",
       },
     ],
   },
@@ -146,39 +146,39 @@ export const POSTS: Post[] = [
     id: "ts-daily-apr-20",
     product: "tradescout",
     type: "daily",
-    title: "TradeScout Daily — Apr 20, 2026",
+    title: "TradeScout Updates — Apr 20, 2026",
     summary:
-      "Seller dashboard shipped, exchange inquiry flow wired to messaging, NHTSA VIN decode live, and SEO homepage/about rewrites deployed.",
+      "Sellers got a new dashboard, buyer messages now open a conversation automatically, vehicle VIN lookup went live, and the homepage was updated to speak to all types of local businesses.",
     date: "2026-04-20",
     commitCount: 3,
     updates: [
       {
         id: "ts-d1",
         category: "feature",
-        title: "Exchange Seller Dashboard",
+        title: "Seller Dashboard Is Live",
         description:
-          "New /exchange/seller-dashboard page with My Listings, Inquiries Inbox, and Conversations tabs.",
+          "Sellers can now view all their listings, manage incoming inquiries, and track conversations from a single dashboard page.",
       },
       {
         id: "ts-d2",
         category: "feature",
-        title: "Inquiry → Conversation Wiring",
+        title: "Buyer Questions Now Open a Chat Thread",
         description:
-          "POST /api/marketplace/inquiries now creates a conversation thread and notifies the seller in-app.",
+          "When a buyer sends a question about a listing, a conversation is created automatically and the seller is notified in the app.",
       },
       {
         id: "ts-d3",
         category: "feature",
-        title: "NHTSA VIN Decode API",
+        title: "Vehicle VIN Lookup Is Live",
         description:
-          "CarSalesConnector.vinLookup() now calls the real NHTSA vPIC API. Tested: 1HGCM82633A004352 → 2003 Honda Accord ✓",
+          "Sellers listing a vehicle can now enter the VIN and get the year, make, model, and trim details filled in automatically.",
       },
       {
         id: "ts-d4",
         category: "seo",
-        title: "Homepage & About Rewrites",
+        title: "Homepage Now Speaks to All Local Businesses",
         description:
-          "Title changed to 'Find Any Local Business Near You'. About page broadened to mention restaurants, retail, home services.",
+          "We updated the homepage headline and About page to make it clear that TradeScout serves restaurants, retailers, home service providers, and more — not just contractors.",
       },
     ],
   },
@@ -187,32 +187,32 @@ export const POSTS: Post[] = [
     id: "ts-daily-apr-19",
     product: "tradescout",
     type: "daily",
-    title: "TradeScout Daily — Apr 19, 2026",
+    title: "TradeScout Updates — Apr 19, 2026",
     summary:
-      "Direct Connect end-to-end flow hardened with 5 gap fixes, ScoutMemory switched to real DB queries, and analytics sources stabilized.",
+      "Several reliability improvements to the Direct Connect job flow, Scout's memory now saves properly between sessions, and reporting data is more accurate.",
     date: "2026-04-19",
     commitCount: 6,
     updates: [
       {
         id: "ts-d5",
         category: "fix",
-        title: "DC Core Loop — 5 Gap Fixes",
+        title: "Direct Connect Job Flow — 5 Reliability Fixes",
         description:
-          "Self-select routing, completion notifications, pending outcome visibility, inbox threads, and provider response card all fixed.",
+          "Fixed issues with how jobs are assigned, how completion notifications are sent, how pending jobs appear in your inbox, and how providers respond to requests.",
       },
       {
         id: "ts-d6",
         category: "fix",
-        title: "ScoutMemory Real DB Queries",
+        title: "Scout Remembers Your Conversations",
         description:
-          "ScoutMemory now reads from and writes to the real database instead of in-memory stubs.",
+          "Scout's memory now correctly saves and recalls past conversations, so it can give you more relevant help over time.",
       },
       {
         id: "ts-d7",
         category: "improvement",
-        title: "Analytics Sources & Bid History",
+        title: "More Accurate Activity Reports",
         description:
-          "Analytics sources and project bid history now return accurate data from the database.",
+          "Your project history and activity data now reflect the correct information, giving you a clearer picture of past work.",
       },
     ],
   },
@@ -221,32 +221,32 @@ export const POSTS: Post[] = [
     id: "ts-daily-apr-18",
     product: "tradescout",
     type: "daily",
-    title: "TradeScout Daily — Apr 18, 2026",
+    title: "TradeScout Updates — Apr 18, 2026",
     summary:
-      "Map intelligence upgraded with Scout-guided recommendations, Solar v1 provider workbench scaffolded, and landing page copy refined.",
+      "Scout can now recommend businesses on the map with explanations, solar service providers got early access tools, and the homepage was simplified.",
     date: "2026-04-18",
     commitCount: 10,
     updates: [
       {
         id: "ts-d8",
         category: "feature",
-        title: "Scout Map Recommendations",
+        title: "Scout Explains Its Map Recommendations",
         description:
-          "Scout now surfaces map-based business recommendations with rationale and a Google Maps admin geo-console.",
+          "When Scout suggests a business on the map, it now tells you why — rating, proximity, availability, and other relevant factors.",
       },
       {
         id: "ts-d9",
         category: "feature",
-        title: "Solar v1 Provider Workbench",
+        title: "Early Tools for Solar Providers",
         description:
-          "Scaffolded the Solar provider workbench with feature gates for the solar vertical.",
+          "Solar service providers now have access to a dedicated workspace with tools tailored to the solar industry.",
       },
       {
         id: "ts-d10",
         category: "improvement",
-        title: "Landing Page Copy Refinements",
+        title: "Homepage Simplified",
         description:
-          "Headline reduced in size, trust placement section removed, How TradeScout Works refocused into 3 clear sections.",
+          "We streamlined the homepage layout — cleaner headline, removed a cluttered section, and made the 'How It Works' section easier to follow.",
       },
     ],
   },
@@ -255,39 +255,39 @@ export const POSTS: Post[] = [
     id: "ts-daily-apr-20b",
     product: "tradescout",
     type: "daily",
-    title: "TradeScout Daily — Apr 20, 2026 (Scout AI & Flow Fixes)",
+    title: "TradeScout Updates — Apr 20, 2026 (Scout & Account Fixes)",
     summary:
-      "Scout AI consistency overhaul shipped in 5 parts, plus 3 bugs and 1 gap fixed across the business signup, user signup, and Direct Connect routing flows.",
+      "Scout AI got a major reliability upgrade, and we fixed three issues affecting business account creation, job routing, and the email verification sign-in flow.",
     date: "2026-04-20",
     commitCount: 2,
     updates: [
       {
         id: "ts-d20b-1",
-        category: "fix",
-        title: "Scout AI 5-Part Consistency Overhaul",
+        category: "improvement",
+        title: "Scout AI Is More Consistent and Faster",
         description:
-          "Dead routing files archived, JSON contract hardened with auto-fill for missing fields, system prompt canonicalized (574 → 190 lines), ScoutOS decomposed into useScoutLocalHandlers hook, and Scout v4 enhanced pipeline enabled by default.",
+          "We overhauled Scout's internal logic to make responses more reliable, removed outdated code that was never being used, and switched on the improved AI pipeline that was previously off by default.",
       },
       {
         id: "ts-d20b-2",
         category: "fix",
-        title: "Business Claim — Wrong Role on Shell Creation",
+        title: "Business Account Type Fixed at Sign-Up",
         description:
-          "createAndClaim() was creating new business shells with type='contractor' / roleContext='contractor'. Fixed to type='other' / roleContext='business_owner'.",
+          "When a business owner claimed a new profile, it was being set up as a contractor account by mistake. This is now fixed — business owner accounts are created correctly from the start.",
       },
       {
         id: "ts-d20b-3",
         category: "fix",
-        title: "DC Routing — Worker Dedup Used Wrong Key",
+        title: "Job Routing No Longer Sends Duplicate Assignments",
         description:
-          "Worker candidates were deduped against existingByContractor (keyed on contractorId), but workers use workerId. Added existingByWorker Set to prevent duplicate worker assignments on expand-reach calls.",
+          "In some cases, the same worker could be assigned to a job more than once when the system expanded its search. This has been corrected.",
       },
       {
         id: "ts-d20b-4",
         category: "improvement",
-        title: "Email Verification Auto-Login",
+        title: "Email Verification Now Signs You In Automatically",
         description:
-          "After verifying email, the server now establishes a session automatically via req.login() so users land directly in the app without a second sign-in step.",
+          "After clicking the verification link in your welcome email, you're now taken straight into the app — no need to sign in again.",
       },
     ],
   },
@@ -296,60 +296,60 @@ export const POSTS: Post[] = [
     id: "ms-weekly-apr-20",
     product: "mealscout",
     type: "weekly",
-    title: "MealScout Weekly Digest — Apr 13–20, 2026",
+    title: "MealScout — Week of Apr 13–20, 2026",
     summary:
-      "Host and food truck flows hardened with Stripe Connect UX improvements, verification banners, and subscription webhook sync. Multi-location support expanded.",
+      "A steady week of reliability improvements for hosts and food truck operators. Payments, booking notifications, and subscription status all got more dependable.",
     date: "2026-04-20",
     commitCount: 18,
     updates: [
       {
         id: "ms-w1",
         category: "fix",
-        title: "Stripe Connect UX Hardening",
+        title: "Smoother Payment Setup for Hosts",
         description:
-          "Host Stripe Connect onboarding flow improved with clearer UX, better error states, and verification banners.",
+          "The process for hosts to set up their payment account is now clearer, with better guidance and more helpful error messages if something goes wrong.",
       },
       {
         id: "ms-w2",
         category: "fix",
-        title: "Subscription Webhook Sync",
+        title: "Subscription Status Stays Up to Date",
         description:
-          "Subscription status now stays in sync with Stripe webhooks — no more stale subscription states after payment events.",
+          "Your subscription status now updates correctly after any payment — no more cases where it showed the wrong plan after a renewal or upgrade.",
       },
       {
         id: "ms-w3",
         category: "feature",
-        title: "Host Multi-Location Support",
+        title: "Manage Multiple Locations from One Account",
         description:
-          "Hosts can now manage multiple locations from a single account with per-location menus and booking settings.",
+          "Hosts with more than one location can now manage all of them from a single account, with separate menus and booking settings for each spot.",
       },
       {
         id: "ms-w4",
         category: "improvement",
-        title: "Free Menu & Booking Clarity",
+        title: "Free Plan Limits Are Now Clearly Shown",
         description:
-          "Free tier menu and booking limitations are now clearly communicated throughout the host dashboard.",
+          "If you're on the free plan, you'll now see clear labels throughout your dashboard explaining what's included and what requires an upgrade.",
       },
       {
         id: "ms-w5",
         category: "feature",
-        title: "VAC Admin Monitoring",
+        title: "Host Compliance Monitoring for Admins",
         description:
-          "Admin panel now includes VAC (Vendor Account Compliance) monitoring for host verification status.",
+          "The admin panel now includes a monitoring view to track which hosts have completed their account verification and which still have steps pending.",
       },
       {
         id: "ms-w6",
         category: "fix",
-        title: "Admin Provisioning Transactional",
+        title: "Account Setup Is Now All-or-Nothing",
         description:
-          "Admin manual provisioning is now fully transactional — no partial states on failure.",
+          "If something goes wrong during manual account setup, the system now rolls back completely instead of leaving the account in a broken half-set-up state.",
       },
       {
         id: "ms-w7",
         category: "seo",
-        title: "SEO + LLMO + LISA Signal Wiring",
+        title: "Better Local Search Visibility",
         description:
-          "Ordered source integration and LISA signal endpoint wired for local search optimization.",
+          "We connected MealScout to additional local search signals, helping food trucks and hosts show up more prominently when people search nearby.",
       },
     ],
   },
@@ -358,25 +358,25 @@ export const POSTS: Post[] = [
     id: "ms-daily-apr-20",
     product: "mealscout",
     type: "daily",
-    title: "MealScout Daily — Apr 20, 2026",
+    title: "MealScout Updates — Apr 20, 2026",
     summary:
-      "Host and food truck flow hardening shipped — Stripe Connect UX, verification banners, host booking email, and subscription webhook sync.",
+      "Hosts now get a confirmation email when a booking comes in, and the payment setup banner now shows correctly for hosts who haven't finished setting up payments.",
     date: "2026-04-20",
     commitCount: 2,
     updates: [
       {
         id: "ms-d1",
         category: "fix",
-        title: "Host Booking Email",
+        title: "Hosts Get Notified When a Booking Is Made",
         description:
-          "Hosts now receive a confirmation email when a booking is made at their location.",
+          "Hosts now receive a confirmation email whenever a customer books at their location, so you never miss a new reservation.",
       },
       {
         id: "ms-d2",
         category: "fix",
-        title: "Stripe Connect Verification Banners",
+        title: "Payment Setup Reminder Now Shows Correctly",
         description:
-          "Verification banners now appear correctly for hosts with incomplete Stripe Connect onboarding.",
+          "If you haven't finished setting up your payment account, the reminder banner now appears as expected so you can complete the process.",
       },
     ],
   },
