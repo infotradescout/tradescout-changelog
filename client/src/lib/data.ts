@@ -250,6 +250,47 @@ export const POSTS: Post[] = [
       },
     ],
   },
+  // ── TradeScout Daily — Apr 20 (Scout + Flows) ─────────────
+  {
+    id: "ts-daily-apr-20b",
+    product: "tradescout",
+    type: "daily",
+    title: "TradeScout Daily — Apr 20, 2026 (Scout AI & Flow Fixes)",
+    summary:
+      "Scout AI consistency overhaul shipped in 5 parts, plus 3 bugs and 1 gap fixed across the business signup, user signup, and Direct Connect routing flows.",
+    date: "2026-04-20",
+    commitCount: 2,
+    updates: [
+      {
+        id: "ts-d20b-1",
+        category: "fix",
+        title: "Scout AI 5-Part Consistency Overhaul",
+        description:
+          "Dead routing files archived, JSON contract hardened with auto-fill for missing fields, system prompt canonicalized (574 → 190 lines), ScoutOS decomposed into useScoutLocalHandlers hook, and Scout v4 enhanced pipeline enabled by default.",
+      },
+      {
+        id: "ts-d20b-2",
+        category: "fix",
+        title: "Business Claim — Wrong Role on Shell Creation",
+        description:
+          "createAndClaim() was creating new business shells with type='contractor' / roleContext='contractor'. Fixed to type='other' / roleContext='business_owner'.",
+      },
+      {
+        id: "ts-d20b-3",
+        category: "fix",
+        title: "DC Routing — Worker Dedup Used Wrong Key",
+        description:
+          "Worker candidates were deduped against existingByContractor (keyed on contractorId), but workers use workerId. Added existingByWorker Set to prevent duplicate worker assignments on expand-reach calls.",
+      },
+      {
+        id: "ts-d20b-4",
+        category: "improvement",
+        title: "Email Verification Auto-Login",
+        description:
+          "After verifying email, the server now establishes a session automatically via req.login() so users land directly in the app without a second sign-in step.",
+      },
+    ],
+  },
   // ── MealScout Weekly Digest ──────────────────────────────
   {
     id: "ms-weekly-apr-20",
@@ -364,9 +405,9 @@ export function getLatestPost(): Post {
 }
 
 export const STATS = {
-  tradescoutCommits: 62,
+  tradescoutCommits: 64,
   mealscoutCommits: 18,
   featuresShipped: 16,
-  fixesShipped: 8,
+  fixesShipped: 11,
   lastUpdated: "Apr 20, 2026",
 };
