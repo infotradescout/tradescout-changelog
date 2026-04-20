@@ -4,7 +4,7 @@
 // Layout: sticky header + left sidebar + main feed + right stats panel
 // ============================================================
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   STATS,
   getFilteredPosts,
@@ -16,6 +16,7 @@ import {
 
 const TS_LOGO = "/manus-storage/tradescout-logo_35cad8f9.png";
 const MS_LOGO = "/manus-storage/mealscout-logo_3758be6c.png";
+const CONTACT_EMAIL = "contact@thetradescout.com";
 
 // ── Category tag ──────────────────────────────────────────
 function CategoryTag({ category }: { category: UpdateCategory }) {
@@ -188,6 +189,192 @@ function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
   );
 }
 
+// ── Suggestion / Error Report form ────────────────────────
+type ReportType = "suggestion" | "bug" | "other";
+
+function SuggestionForm() {
+  const [type, setType] = useState<ReportType>("suggestion");
+  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const typeLabels: Record<ReportType, { label: string; subject: string; color: string }> = {
+    suggestion: { label: "Suggestion", subject: "TradeScout Suggestion", color: "#4ade80" },
+    bug: { label: "Bug / Error", subject: "TradeScout Bug Report", color: "#f87171" },
+    other: { label: "Other", subject: "TradeScout Feedback", color: "#a78bfa" },
+  };
+
+  const handleSend = () => {
+    if (!message.trim()) {
+      textareaRef.current?.focus();
+      return;
+    }
+    const { subject } = typeLabels[type];
+    const replyLine = email.trim() ? `\nReply to: ${email.trim()}\n` : "";
+    const body = `${replyLine}\n${message.trim()}\n\n---\nSent from tradescoutinfo.us`;
+    const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailto, "_blank");
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      setMessage("");
+      setEmail("");
+    }, 4000);
+  };
+
+  return (
+    <section
+      id="suggestions"
+      className="rounded-2xl overflow-hidden"
+      style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      {/* Header */}
+      <div
+        className="px-6 py-4 flex items-center gap-3"
+        style={{
+          background: "linear-gradient(90deg, rgba(249,115,22,0.07) 0%, transparent 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <div
+          className="flex items-center justify-center rounded-lg shrink-0"
+          style={{ width: 32, height: 32, background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.2)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1L8.5 5.5H13L9.5 8L11 12.5L7 10L3 12.5L4.5 8L1 5.5H5.5L7 1Z" fill="#f97316" />
+          </svg>
+        </div>
+        <div>
+          <h3
+            className="text-sm font-bold"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.9)" }}
+          >
+            Suggestions & Error Reports
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+            Help us improve — your message goes directly to the team.
+          </p>
+        </div>
+      </div>
+
+      {/* Form body */}
+      <div className="px-6 py-5 space-y-4">
+        {/* Type selector */}
+        <div className="flex gap-2">
+          {(Object.keys(typeLabels) as ReportType[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setType(t)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: type === t ? `${typeLabels[t].color}18` : "rgba(255,255,255,0.04)",
+                color: type === t ? typeLabels[t].color : "rgba(255,255,255,0.45)",
+                border: `1px solid ${type === t ? `${typeLabels[t].color}35` : "rgba(255,255,255,0.07)"}`,
+              }}
+            >
+              {typeLabels[t].label}
+            </button>
+          ))}
+        </div>
+
+        {/* Message textarea */}
+        <div>
+          <label
+            className="block text-xs font-medium mb-1.5"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            {type === "bug" ? "Describe the bug or error" : type === "suggestion" ? "Your suggestion" : "Your message"}
+          </label>
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            placeholder={
+              type === "bug"
+                ? "What happened? What were you trying to do? Include any error messages..."
+                : type === "suggestion"
+                ? "What feature or improvement would you like to see?"
+                : "Anything else on your mind..."
+            }
+            className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-all"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.85)",
+              fontFamily: "inherit",
+              lineHeight: 1.6,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            }}
+          />
+        </div>
+
+        {/* Optional email */}
+        <div>
+          <label
+            className="block text-xs font-medium mb-1.5"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            Your email{" "}
+            <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>(optional — for follow-up)</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.85)",
+              fontFamily: "inherit",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            }}
+          />
+        </div>
+
+        {/* Send button + note */}
+        <div className="flex items-center justify-between gap-4 pt-1">
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+            Opens your email client pre-filled and addressed to{" "}
+            <span style={{ color: "rgba(255,255,255,0.4)" }}>{CONTACT_EMAIL}</span>
+          </p>
+          <button
+            onClick={handleSend}
+            disabled={sent}
+            className="shrink-0 px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={{
+              background: sent ? "rgba(74,222,128,0.15)" : "#f97316",
+              color: sent ? "#4ade80" : "#fff",
+              border: sent ? "1px solid rgba(74,222,128,0.3)" : "none",
+              cursor: sent ? "default" : "pointer",
+              minWidth: 100,
+            }}
+          >
+            {sent ? "✓ Opening…" : "Send →"}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Sidebar nav ───────────────────────────────────────────
 function Sidebar({
   activeProduct,
@@ -298,6 +485,14 @@ function Sidebar({
           >
             <span>↗</span> MealScout
           </a>
+          {/* Scroll to suggestions form */}
+          <button
+            onClick={() => document.getElementById("suggestions")?.scrollIntoView({ behavior: "smooth" })}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{ color: "rgba(249,115,22,0.7)" }}
+          >
+            <span>✦</span> Suggest / Report
+          </button>
         </div>
       </div>
     </aside>
@@ -375,6 +570,23 @@ function StatsPanel() {
             Posts are generated automatically every 24 hours and every Sunday from both repos.
           </p>
         </div>
+
+        {/* Quick suggest link */}
+        <button
+          onClick={() => document.getElementById("suggestions")?.scrollIntoView({ behavior: "smooth" })}
+          className="w-full rounded-xl p-3.5 text-left transition-all group"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <p className="text-xs font-semibold mb-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+            Have feedback?
+          </p>
+          <p className="text-[11px]" style={{ color: "rgba(249,115,22,0.7)" }}>
+            Submit a suggestion or report a bug →
+          </p>
+        </button>
       </div>
     </aside>
   );
@@ -469,6 +681,18 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Feedback shortcut in header */}
+            <button
+              onClick={() => document.getElementById("suggestions")?.scrollIntoView({ behavior: "smooth" })}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: "rgba(249,115,22,0.08)",
+                color: "rgba(249,115,22,0.8)",
+                border: "1px solid rgba(249,115,22,0.15)",
+              }}
+            >
+              ✦ Feedback
+            </button>
             <span className="pulse-dot" />
             <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
               Auto-updating
@@ -527,7 +751,7 @@ export default function Home() {
             onType={setActiveType}
           />
 
-          {/* Feed */}
+          {/* Feed + Suggestion form */}
           <main className="flex-1 min-w-0 space-y-4">
             {posts.length === 0 ? (
               <div
@@ -543,6 +767,11 @@ export default function Home() {
                 <PostCard key={post.id} post={post} isLatest={post.id === latestId} />
               ))
             )}
+
+            {/* Suggestion / Error report form — always visible below feed */}
+            <div className="pt-4">
+              <SuggestionForm />
+            </div>
           </main>
 
           {/* Stats panel */}
@@ -580,6 +809,13 @@ export default function Home() {
               style={{ color: "rgba(255,255,255,0.3)" }}
             >
               mealscout.app ↗
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-xs font-mono transition-colors"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              {CONTACT_EMAIL}
             </a>
           </div>
         </div>
