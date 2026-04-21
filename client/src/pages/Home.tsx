@@ -22,7 +22,7 @@ const ALL_TIME_BLURBS = {
   tradescout:
     "TradeScout helps people discover and compare trusted local service professionals faster, with real-world signals that make it easier to choose who to call and why.",
   mealscout:
-    "MealScout helps busy people quickly find what to eat nearby by surfacing real options, useful details, and straightforward recommendations without endless scrolling.",
+    "MealScout is built for food business owners to drive repeat customers, fill slow hours, and manage visibility in one place. Diners benefit too by quickly finding trusted nearby options and better local deals without endless searching.",
 };
 
 // ── Category tag ──────────────────────────────────────────
