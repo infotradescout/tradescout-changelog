@@ -404,6 +404,86 @@ export function getLatestPost(): Post {
   return [...ALL_POSTS].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 }
 
+function getCategoryCount(posts: Post[], category: UpdateCategory): number {
+  return posts.reduce(
+    (sum, post) => sum + post.updates.filter((u) => u.category === category).length,
+    0
+  );
+}
+
+export interface DailyComparisonStats {
+  latestDate: string;
+  latest: {
+    commits: number;
+    features: number;
+    fixes: number;
+  };
+  averageDaily: {
+    commits: number;
+    features: number;
+    fixes: number;
+  };
+  dayCount: number;
+}
+
+export function getDailyComparisonStats(): DailyComparisonStats {
+  const dailyPosts = ALL_POSTS.filter((p) => p.type === "daily");
+
+  if (dailyPosts.length === 0) {
+    return {
+      latestDate: "",
+      latest: { commits: 0, features: 0, fixes: 0 },
+      averageDaily: { commits: 0, features: 0, fixes: 0 },
+      dayCount: 0,
+    };
+  }
+
+  const byDate = new Map<string, Post[]>();
+  for (const post of dailyPosts) {
+    const list = byDate.get(post.date) ?? [];
+    list.push(post);
+    byDate.set(post.date, list);
+  }
+
+  const sortedDates = Array.from(byDate.keys()).sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  );
+  const latestDate = sortedDates[0];
+
+  const latestPosts = byDate.get(latestDate) ?? [];
+  const latestCommits = latestPosts.reduce((sum, post) => sum + post.commitCount, 0);
+  const latestFeatures = getCategoryCount(latestPosts, "feature");
+  const latestFixes = getCategoryCount(latestPosts, "fix");
+
+  const totals = sortedDates.reduce(
+    (acc, date) => {
+      const posts = byDate.get(date) ?? [];
+      acc.commits += posts.reduce((sum, post) => sum + post.commitCount, 0);
+      acc.features += getCategoryCount(posts, "feature");
+      acc.fixes += getCategoryCount(posts, "fix");
+      return acc;
+    },
+    { commits: 0, features: 0, fixes: 0 }
+  );
+
+  const dayCount = sortedDates.length;
+
+  return {
+    latestDate,
+    latest: {
+      commits: latestCommits,
+      features: latestFeatures,
+      fixes: latestFixes,
+    },
+    averageDaily: {
+      commits: totals.commits / dayCount,
+      features: totals.features / dayCount,
+      fixes: totals.fixes / dayCount,
+    },
+    dayCount,
+  };
+}
+
 export const STATS = {
   tradescoutCommits: 64,
   mealscoutCommits: 18,

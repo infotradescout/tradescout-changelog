@@ -7,6 +7,7 @@
 import { useState, useMemo, useRef } from "react";
 import {
   STATS,
+  getDailyComparisonStats,
   getFilteredPosts,
   type Post,
   type Product,
@@ -17,6 +18,12 @@ import {
 const TS_LOGO = "/manus-storage/tradescout-logo_35cad8f9.png";
 const MS_LOGO = "/manus-storage/mealscout-logo_3758be6c.png";
 const CONTACT_EMAIL = "contact@thetradescout.com";
+const ALL_TIME_BLURBS = {
+  tradescout:
+    "TradeScout helps people discover and compare trusted local service professionals faster, with real-world signals that make it easier to choose who to call and why.",
+  mealscout:
+    "MealScout helps busy people quickly find what to eat nearby by surfacing real options, useful details, and straightforward recommendations without endless scrolling.",
+};
 
 // ── Category tag ──────────────────────────────────────────
 function CategoryTag({ category }: { category: UpdateCategory }) {
@@ -78,14 +85,15 @@ function TypeBadge({ type }: { type: PostType }) {
 function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const isTS = post.product === "tradescout";
+  const previewUpdates = post.updates.slice(0, 2);
 
   return (
     <article
-      className={`post-card bracket-corner p-5 ${!isTS ? "mealscout-card" : ""}`}
+      className={`post-card bracket-corner p-4 sm:p-5 ${!isTS ? "mealscout-card" : ""}`}
       style={{ borderColor: isLatest ? (isTS ? "rgba(249,115,22,0.3)" : "rgba(255,77,46,0.3)") : undefined }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 mb-3">
         <div className="flex flex-wrap items-center gap-2">
           {isLatest && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
@@ -97,7 +105,7 @@ function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
           <TypeBadge type={post.type} />
         </div>
         <span
-          className="text-xs font-mono shrink-0"
+          className="text-[11px] sm:text-xs font-mono shrink-0"
           style={{ color: "rgba(255,255,255,0.35)" }}
         >
           {new Date(post.date).toLocaleDateString("en-US", {
@@ -117,21 +125,21 @@ function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
       </h2>
 
       {/* Summary */}
-      <p className="text-sm leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <p className="text-[13px] sm:text-sm leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.6)" }}>
         {post.summary}
       </p>
 
       {/* Commit count */}
       <div className="flex items-center gap-3 mb-4">
         <span
-          className="text-xs font-mono"
+          className="text-[11px] sm:text-xs font-mono"
           style={{ color: "rgba(255,255,255,0.35)" }}
         >
           {post.commitCount} commit{post.commitCount !== 1 ? "s" : ""}
         </span>
         <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
         <span
-          className="text-xs font-mono"
+          className="text-[11px] sm:text-xs font-mono"
           style={{ color: "rgba(255,255,255,0.35)" }}
         >
           {post.updates.length} update{post.updates.length !== 1 ? "s" : ""}
@@ -162,18 +170,42 @@ function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
           ))}
         </div>
       ) : (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {post.updates.slice(0, 4).map((u) => (
-            <CategoryTag key={u.id} category={u.category} />
-          ))}
-          {post.updates.length > 4 && (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded"
-              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}
-            >
-              +{post.updates.length - 4} more
-            </span>
-          )}
+        <div className="mb-4">
+          <div className="md:hidden space-y-2.5">
+            {previewUpdates.map((u) => (
+              <div
+                key={u.id}
+                className="rounded-lg p-2.5"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                <div className="mb-1.5">
+                  <CategoryTag category={u.category} />
+                </div>
+                <p className="text-xs font-medium leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
+                  {u.title}
+                </p>
+              </div>
+            ))}
+            {post.updates.length > previewUpdates.length && (
+              <p className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+                +{post.updates.length - previewUpdates.length} more update{post.updates.length - previewUpdates.length !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+
+          <div className="hidden md:flex flex-wrap gap-1.5">
+            {post.updates.slice(0, 4).map((u) => (
+              <CategoryTag key={u.id} category={u.category} />
+            ))}
+            {post.updates.length > 4 && (
+              <span
+                className="text-[11px] font-mono px-2 py-0.5 rounded"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}
+              >
+                +{post.updates.length - 4} more
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -186,6 +218,287 @@ function PostCard({ post, isLatest }: { post: Post; isLatest: boolean }) {
         {expanded ? "↑ Collapse" : "↓ View all updates"}
       </button>
     </article>
+  );
+}
+
+function AllTimeUpdate() {
+  return (
+    <section
+      id="all-time-update"
+      className="rounded-2xl p-4 sm:p-5"
+      style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+            All Time Update
+          </p>
+          <h2
+            className="text-lg sm:text-xl font-bold"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}
+          >
+            What each product actually is
+          </h2>
+          <p className="text-xs sm:text-sm mt-1.5 max-w-2xl" style={{ color: "rgba(255,255,255,0.5)" }}>
+            This is our living plain-English view of each app. We refine these blurbs over time so new users can immediately understand what TradeScout and MealScout do.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <article
+          className="rounded-xl p-4"
+          style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <img src={TS_LOGO} alt="TradeScout" className="w-5 h-5 rounded-full object-cover" />
+            <h3 className="text-sm font-semibold" style={{ color: "#f97316" }}>
+              TradeScout
+            </h3>
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
+            {ALL_TIME_BLURBS.tradescout}
+          </p>
+        </article>
+
+        <article
+          className="rounded-xl p-4"
+          style={{ background: "rgba(255,77,46,0.08)", border: "1px solid rgba(255,77,46,0.2)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <img src={MS_LOGO} alt="MealScout" className="w-5 h-5 rounded-full object-cover" />
+            <h3 className="text-sm font-semibold" style={{ color: "#ff4d2e" }}>
+              MealScout
+            </h3>
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
+            {ALL_TIME_BLURBS.mealscout}
+          </p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+type DeepDiveListType =
+  | "all"
+  | "feature"
+  | "fix"
+  | "improvement"
+  | "seo"
+  | "commits";
+
+function DeepDiveLists({ posts }: { posts: Post[] }) {
+  const [activeList, setActiveList] = useState<DeepDiveListType>("all");
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const updateRows = useMemo(
+    () =>
+      posts
+        .flatMap((post) =>
+          post.updates.map((u) => ({
+            ...u,
+            postId: post.id,
+            postTitle: post.title,
+            postDate: post.date,
+            product: post.product,
+            postType: post.type,
+          }))
+        )
+        .sort((a, b) => new Date(b.postDate).getTime() - new Date(a.postDate).getTime()),
+    [posts]
+  );
+
+  const commitRows = useMemo(
+    () => [...posts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [posts]
+  );
+
+  const counts = useMemo(
+    () => ({
+      all: updateRows.length,
+      feature: updateRows.filter((r) => r.category === "feature").length,
+      fix: updateRows.filter((r) => r.category === "fix").length,
+      improvement: updateRows.filter((r) => r.category === "improvement").length,
+      seo: updateRows.filter((r) => r.category === "seo").length,
+      commits: commitRows.length,
+    }),
+    [commitRows.length, updateRows]
+  );
+
+  const filteredUpdates = useMemo(() => {
+    const byType =
+      activeList === "all"
+        ? updateRows
+        : updateRows.filter((row) => row.category === activeList);
+
+    if (!normalizedQuery) return byType;
+
+    return byType.filter((row) => {
+      const haystack = `${row.title} ${row.description} ${row.postTitle} ${row.product}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [activeList, normalizedQuery, updateRows]);
+
+  const filteredCommits = useMemo(() => {
+    if (activeList !== "commits") return [];
+    if (!normalizedQuery) return commitRows;
+    return commitRows.filter((row) => {
+      const haystack = `${row.title} ${row.summary} ${row.product}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [activeList, commitRows, normalizedQuery]);
+
+  const listTabs: { value: DeepDiveListType; label: string }[] = [
+    { value: "all", label: "All Updates" },
+    { value: "feature", label: "Features" },
+    { value: "fix", label: "Bug Fixes" },
+    { value: "improvement", label: "Improvements" },
+    { value: "seo", label: "SEO" },
+    { value: "commits", label: "Commits" },
+  ];
+
+  const visibleCount =
+    activeList === "commits" ? filteredCommits.length : filteredUpdates.length;
+
+  return (
+    <section
+      id="deep-dive"
+      className="rounded-2xl p-4 sm:p-5"
+      style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="mb-4">
+        <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+          Deep Dive Lists
+        </p>
+        <h2 className="text-lg sm:text-xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}>
+          Explore every feature, fix, and commit snapshot
+        </h2>
+        <p className="text-xs sm:text-sm mt-1.5 max-w-2xl" style={{ color: "rgba(255,255,255,0.5)" }}>
+          This view follows your current product and cadence filters so people can inspect the full work behind each release.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {listTabs.map((tab) => {
+          const active = activeList === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setActiveList(tab.value)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: active ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.04)",
+                color: active ? "#f97316" : "rgba(255,255,255,0.55)",
+                border: `1px solid ${active ? "rgba(249,115,22,0.3)" : "rgba(255,255,255,0.08)"}`,
+              }}
+            >
+              {tab.label} ({counts[tab.value]})
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mb-4">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by title, summary, description, or product..."
+          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none transition-all"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "rgba(255,255,255,0.85)",
+          }}
+        />
+      </div>
+
+      <p className="text-[11px] font-mono mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+        Showing {visibleCount} item{visibleCount !== 1 ? "s" : ""}
+      </p>
+
+      {activeList === "commits" ? (
+        <div className="space-y-2.5 max-h-[500px] overflow-auto pr-1">
+          {filteredCommits.map((row) => (
+            <article
+              key={row.id}
+              className="rounded-lg p-3"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <ProductBadge product={row.product} />
+                  <TypeBadge type={row.type} />
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+                    {row.commitCount} commit{row.commitCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {new Date(row.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
+                {row.title}
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {row.summary}
+              </p>
+            </article>
+          ))}
+          {filteredCommits.length === 0 && (
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+              No commits matched this view.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2.5 max-h-[500px] overflow-auto pr-1">
+          {filteredUpdates.map((row) => (
+            <article
+              key={`${row.postId}-${row.id}`}
+              className="rounded-lg p-3"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <ProductBadge product={row.product} />
+                  <CategoryTag category={row.category} />
+                </div>
+                <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {new Date(row.postDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
+                {row.title}
+              </p>
+              {row.description && (
+                <p className="text-xs leading-relaxed mb-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {row.description}
+                </p>
+              )}
+              <p className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                From: {row.postTitle}
+              </p>
+            </article>
+          ))}
+          {filteredUpdates.length === 0 && (
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+              No updates matched this view.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -487,6 +800,13 @@ function Sidebar({
           </a>
           {/* Scroll to suggestions form */}
           <button
+            onClick={() => document.getElementById("deep-dive")?.scrollIntoView({ behavior: "smooth" })}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            <span>☰</span> Deep Dive Lists
+          </button>
+          <button
             onClick={() => document.getElementById("suggestions")?.scrollIntoView({ behavior: "smooth" })}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{ color: "rgba(249,115,22,0.7)" }}
@@ -501,12 +821,35 @@ function Sidebar({
 
 // ── Stats panel ───────────────────────────────────────────
 function StatsPanel() {
+  const dailyComparison = getDailyComparisonStats();
   const stats = [
     { label: "TS Commits (7d)", value: STATS.tradescoutCommits, color: "#f97316" },
     { label: "MS Commits (7d)", value: STATS.mealscoutCommits, color: "#ff4d2e" },
     { label: "Features Shipped", value: STATS.featuresShipped, color: "#4ade80" },
     { label: "Fixes Shipped", value: STATS.fixesShipped, color: "#fbbf24" },
   ];
+  const comparisonRows = [
+    {
+      label: "Commits",
+      latest: dailyComparison.latest.commits,
+      avg: dailyComparison.averageDaily.commits,
+      color: "#f97316",
+    },
+    {
+      label: "Features",
+      latest: dailyComparison.latest.features,
+      avg: dailyComparison.averageDaily.features,
+      color: "#4ade80",
+    },
+    {
+      label: "Bug Fixes",
+      latest: dailyComparison.latest.fixes,
+      avg: dailyComparison.averageDaily.fixes,
+      color: "#fbbf24",
+    },
+  ];
+
+  const formatAvg = (value: number) => value.toFixed(1);
 
   return (
     <aside className="w-56 shrink-0 hidden xl:block">
@@ -553,6 +896,56 @@ function StatsPanel() {
           >
             Last updated: {STATS.lastUpdated}
           </p>
+        </div>
+
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <p
+            className="text-[10px] font-mono uppercase tracking-widest mb-1"
+            style={{ color: "rgba(255,255,255,0.3)" }}
+          >
+            Latest Daily vs Avg/Day
+          </p>
+          <p className="text-[10px] mb-3" style={{ color: "rgba(255,255,255,0.25)" }}>
+            Based on {dailyComparison.dayCount} daily snapshots
+          </p>
+          <div className="space-y-2.5">
+            {comparisonRows.map((row) => {
+              const delta = row.latest - row.avg;
+              const deltaLabel = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}`;
+              const deltaColor = delta >= 0 ? "rgba(74,222,128,0.9)" : "rgba(248,113,113,0.9)";
+
+              return (
+                <div key={row.label}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      {row.label}
+                    </span>
+                    <span className="text-xs font-mono" style={{ color: deltaColor }}>
+                      {deltaLabel}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                    {row.latest} latest · {formatAvg(row.avg)} avg/day
+                  </p>
+                  <div
+                    className="h-0.5 rounded-full mt-1.5"
+                    style={{ background: "rgba(255,255,255,0.07)" }}
+                  >
+                    <div
+                      className="h-0.5 rounded-full"
+                      style={{
+                        width: `${Math.min((row.latest / Math.max(row.avg || 1, 1)) * 50, 100)}%`,
+                        background: row.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Auto-post notice */}
@@ -673,7 +1066,7 @@ export default function Home() {
                 TradeScout Info
               </span>
               <span
-                className="text-xs ml-2 font-mono"
+                className="hidden sm:inline text-xs ml-2 font-mono"
                 style={{ color: "rgba(255,255,255,0.3)" }}
               >
                 tradescoutinfo.us
@@ -694,8 +1087,9 @@ export default function Home() {
               ✦ Feedback
             </button>
             <span className="pulse-dot" />
-            <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Auto-updating
+            <span className="text-[11px] sm:text-xs font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <span className="sm:hidden">Live</span>
+              <span className="hidden sm:inline">Auto-updating</span>
             </span>
           </div>
         </div>
@@ -742,7 +1136,15 @@ export default function Home() {
           onType={setActiveType}
         />
 
-        <div className="flex gap-6 mt-4 lg:mt-0">
+        <div className="mt-4">
+          <AllTimeUpdate />
+        </div>
+
+        <div className="mt-4">
+          <DeepDiveLists posts={posts} />
+        </div>
+
+        <div className="flex gap-6 mt-4 lg:mt-5">
           {/* Sidebar */}
           <Sidebar
             activeProduct={activeProduct}
