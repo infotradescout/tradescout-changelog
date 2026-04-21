@@ -15,8 +15,8 @@ import {
   type UpdateCategory,
 } from "@/lib/data";
 
-const TS_LOGO = "/manus-storage/tradescout-logo_35cad8f9.png";
-const MS_LOGO = "/manus-storage/mealscout-logo_3758be6c.png";
+const TS_LOGO = "/brand/tradescout-logo-circle.png";
+const MS_LOGO = "/brand/mealscout-logo.png";
 const CONTACT_EMAIL = "contact@thetradescout.com";
 const ALL_TIME_BLURBS = {
   tradescout:
