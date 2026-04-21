@@ -225,53 +225,36 @@ function AllTimeUpdate() {
   return (
     <section
       id="all-time-update"
-      className="rounded-2xl p-4 sm:p-5"
+      className="rounded-2xl p-3 sm:p-4"
       style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.07)" }}
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-            All Time Update
-          </p>
-          <h2
-            className="text-lg sm:text-xl font-bold"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}
-          >
-            What each product actually is
-          </h2>
-          <p className="text-xs sm:text-sm mt-1.5 max-w-2xl" style={{ color: "rgba(255,255,255,0.5)" }}>
-            This is our living plain-English view of each app. We refine these blurbs over time so new users can immediately understand what TradeScout and MealScout do.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <article
-          className="rounded-xl p-4"
+          className="rounded-xl p-2.5 sm:p-3"
           style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)" }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <img src={TS_LOGO} alt="TradeScout" className="w-5 h-5 rounded-full object-cover" />
-            <h3 className="text-sm font-semibold" style={{ color: "#f97316" }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <img src={TS_LOGO} alt="TradeScout" className="w-4 h-4 rounded-full object-cover" />
+            <h3 className="text-xs sm:text-sm font-semibold" style={{ color: "#f97316" }}>
               TradeScout
             </h3>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
+          <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
             {ALL_TIME_BLURBS.tradescout}
           </p>
         </article>
 
         <article
-          className="rounded-xl p-4"
+          className="rounded-xl p-2.5 sm:p-3"
           style={{ background: "rgba(255,77,46,0.08)", border: "1px solid rgba(255,77,46,0.2)" }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <img src={MS_LOGO} alt="MealScout" className="w-5 h-5 rounded-full object-cover" />
-            <h3 className="text-sm font-semibold" style={{ color: "#ff4d2e" }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <img src={MS_LOGO} alt="MealScout" className="w-4 h-4 rounded-full object-cover" />
+            <h3 className="text-xs sm:text-sm font-semibold" style={{ color: "#ff4d2e" }}>
               MealScout
             </h3>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
+          <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.78)" }}>
             {ALL_TIME_BLURBS.mealscout}
           </p>
         </article>
