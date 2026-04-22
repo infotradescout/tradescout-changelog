@@ -271,6 +271,17 @@ type DeepDiveListType =
   | "seo"
   | "commits";
 
+type LiveCommitRow = {
+  id: string;
+  product: Product;
+  postType: PostType;
+  postDate: string;
+  postTitle: string;
+  category: UpdateCategory;
+  title: string;
+  description: string;
+};
+
 function DeepDiveLists({ posts }: { posts: Post[] }) {
   const [activeList, setActiveList] = useState<DeepDiveListType>("all");
   const [query, setQuery] = useState("");
@@ -972,11 +983,13 @@ function StatsPanel() {
 function MobileFilters({
   activeProduct,
   activeType,
+  isLiveFeed,
   onProduct,
   onType,
 }: {
   activeProduct: Product | "all";
   activeType: PostType | "all";
+  isLiveFeed: boolean;
   onProduct: (p: Product | "all") => void;
   onType: (t: PostType | "all") => void;
 }) {
@@ -996,21 +1009,25 @@ function MobileFilters({
           {p === "all" ? "All" : p === "tradescout" ? "TradeScout" : "MealScout"}
         </button>
       ))}
-      <div style={{ width: 1, background: "rgba(255,255,255,0.08)" }} className="shrink-0" />
-      {(["all", "daily", "weekly"] as const).map((t) => (
-        <button
-          key={t}
-          onClick={() => onType(t)}
-          className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-          style={{
-            background: activeType === t ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
-            color: activeType === t ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)",
-            border: `1px solid ${activeType === t ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
-          }}
-        >
-          {t === "all" ? "All Posts" : t === "daily" ? "24h" : "Weekly"}
-        </button>
-      ))}
+      {!isLiveFeed && (
+        <>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.08)" }} className="shrink-0" />
+          {(["all", "daily", "weekly"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => onType(t)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+              style={{
+                background: activeType === t ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
+                color: activeType === t ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)",
+                border: `1px solid ${activeType === t ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
+              }}
+            >
+              {t === "all" ? "All Posts" : t === "daily" ? "24h" : "Weekly"}
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -1019,10 +1036,45 @@ function MobileFilters({
 export default function Home() {
   const [activeProduct, setActiveProduct] = useState<Product | "all">("all");
   const [activeType, setActiveType] = useState<PostType | "all">("all");
+  const [isLiveFeed, setIsLiveFeed] = useState(false);
 
-  const posts = useMemo(
+  const snapshotPosts = useMemo(
     () => getFilteredPosts({ product: activeProduct, type: activeType }),
     [activeProduct, activeType]
+  );
+
+  const liveSourcePosts = useMemo(
+    () => getFilteredPosts({ product: activeProduct, type: "all" }),
+    [activeProduct]
+  );
+
+  const posts = isLiveFeed ? liveSourcePosts : snapshotPosts;
+
+  const liveCommitRows = useMemo<LiveCommitRow[]>(
+    () =>
+      liveSourcePosts.flatMap((post) =>
+        post.updates.map((u, index) => ({
+          id: `${post.id}-${u.id}-${index}`,
+          product: post.product,
+          postType: post.type,
+          postDate: post.date,
+          postTitle: post.title,
+          category: u.category,
+          title: u.title,
+          description: u.description,
+        }))
+      ),
+    [liveSourcePosts]
+  );
+
+  const dailySnapshotPosts = useMemo(
+    () => snapshotPosts.filter((p) => p.type === "daily"),
+    [snapshotPosts]
+  );
+
+  const weeklySnapshotPosts = useMemo(
+    () => snapshotPosts.filter((p) => p.type === "weekly"),
+    [snapshotPosts]
   );
 
   const latestId = getFilteredPosts({ product: "all", type: "all" })[0]?.id;
@@ -1101,11 +1153,43 @@ export default function Home() {
             className="text-2xl md:text-3xl font-bold mb-2"
             style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}
           >
-            What we shipped
+            Ship Log
           </h1>
           <p className="text-sm max-w-xl" style={{ color: "rgba(255,255,255,0.5)" }}>
-            24-hour and weekly snapshots of every feature, fix, and improvement across TradeScout and MealScout. Auto-generated from our git history.
+            Toggle between true live commit flow and the daily/weekly snapshots. Snapshot mode is optimized for high-level visibility.
           </p>
+          <div className="mt-4 max-w-2xl rounded-xl p-3 sm:p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Feed Mode
+                </p>
+                <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  {isLiveFeed ? "Live Commit Feed" : "Daily + Weekly Snapshots"}
+                </p>
+                <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  {isLiveFeed
+                    ? `Showing ${liveCommitRows.length} commit entries in chronological feed order.`
+                    : `Showing ${dailySnapshotPosts.length} daily and ${weeklySnapshotPosts.length} weekly snapshots.`}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !isLiveFeed;
+                  setIsLiveFeed(next);
+                  if (next) setActiveType("all");
+                }}
+                className="shrink-0 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all"
+                style={{
+                  background: isLiveFeed ? "rgba(34,197,94,0.16)" : "rgba(56,189,248,0.14)",
+                  color: isLiveFeed ? "#4ade80" : "#38bdf8",
+                  border: `1px solid ${isLiveFeed ? "rgba(74,222,128,0.32)" : "rgba(56,189,248,0.28)"}`,
+                }}
+              >
+                {isLiveFeed ? "Live Feed: ON" : "Live Feed: OFF"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1115,6 +1199,7 @@ export default function Home() {
         <MobileFilters
           activeProduct={activeProduct}
           activeType={activeType}
+          isLiveFeed={isLiveFeed}
           onProduct={setActiveProduct}
           onType={setActiveType}
         />
@@ -1138,7 +1223,7 @@ export default function Home() {
 
           {/* Feed + Suggestion form */}
           <main className="flex-1 min-w-0 space-y-4">
-            {posts.length === 0 ? (
+            {!isLiveFeed && posts.length === 0 ? (
               <div
                 className="rounded-xl p-10 text-center"
                 style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.06)" }}
@@ -1147,10 +1232,129 @@ export default function Home() {
                   No posts match the current filters.
                 </p>
               </div>
+            ) : isLiveFeed ? (
+              <section
+                className="rounded-xl p-4 sm:p-5"
+                style={{ background: "var(--ts-surface)", border: "1px solid rgba(74,222,128,0.2)" }}
+              >
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(74,222,128,0.8)" }}>
+                      True Live Feed
+                    </p>
+                    <h2 className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}>
+                      Every Commit As It Lands
+                    </h2>
+                  </div>
+                  <span className="text-[11px] font-mono px-2.5 py-1 rounded" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>
+                    {liveCommitRows.length} total
+                  </span>
+                </div>
+
+                {liveCommitRows.length === 0 ? (
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    No commit events matched this filter.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {liveCommitRows.map((row) => (
+                      <article
+                        key={row.id}
+                        className="rounded-lg p-3"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <ProductBadge product={row.product} />
+                            <TypeBadge type={row.postType} />
+                            <CategoryTag category={row.category} />
+                          </div>
+                          <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            {new Date(row.postDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
+                          {row.title}
+                        </p>
+                        {row.description && (
+                          <p className="text-xs leading-relaxed mb-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                            {row.description}
+                          </p>
+                        )}
+                        <p className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          Source: {row.postTitle}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
             ) : (
-              posts.map((post) => (
-                <PostCard key={post.id} post={post} isLatest={post.id === latestId} />
-              ))
+              <>
+                <section
+                  className="rounded-xl p-4 sm:p-5"
+                  style={{ background: "var(--ts-surface)", border: "1px solid rgba(56,189,248,0.22)" }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(56,189,248,0.8)" }}>
+                        Daily Snapshots
+                      </p>
+                      <h2 className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}>
+                        24h View
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono px-2.5 py-1 rounded" style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8" }}>
+                      {dailySnapshotPosts.length}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {dailySnapshotPosts.length === 0 ? (
+                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        No daily snapshots match the current filters.
+                      </p>
+                    ) : (
+                      dailySnapshotPosts.map((post) => (
+                        <PostCard key={post.id} post={post} isLatest={post.id === latestId} />
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                <section
+                  className="rounded-xl p-4 sm:p-5"
+                  style={{ background: "var(--ts-surface)", border: "1px solid rgba(167,139,250,0.22)" }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(167,139,250,0.8)" }}>
+                        Weekly Digests
+                      </p>
+                      <h2 className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}>
+                        Week In Review
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono px-2.5 py-1 rounded" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>
+                      {weeklySnapshotPosts.length}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {weeklySnapshotPosts.length === 0 ? (
+                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        No weekly digests match the current filters.
+                      </p>
+                    ) : (
+                      weeklySnapshotPosts.map((post) => (
+                        <PostCard key={post.id} post={post} isLatest={post.id === latestId} />
+                      ))
+                    )}
+                  </div>
+                </section>
+              </>
             )}
 
             {/* Suggestion / Error report form — always visible below feed */}
