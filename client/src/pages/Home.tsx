@@ -4,8 +4,9 @@
 // Layout: sticky header + left sidebar + main feed + right stats panel
 // ============================================================
 
-import { useState, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  POSTS,
   STATS,
   getDailyComparisonStats,
   getFilteredPosts,
@@ -281,6 +282,129 @@ type LiveCommitRow = {
   title: string;
   description: string;
 };
+
+type RepoCommitSource = {
+  owner: string;
+  repo: string;
+  product: Product;
+};
+
+type LiveCommitEvent = {
+  id: string;
+  sha: string;
+  product: Product;
+  repo: string;
+  title: string;
+  description: string;
+  category: UpdateCategory;
+  date: string;
+  url: string;
+};
+
+const SNAPSHOT_SYNC_MS = 5 * 60 * 1000;
+const LIVE_COMMIT_SYNC_MS = 3 * 60 * 1000;
+
+const LIVE_REPOS: RepoCommitSource[] = [
+  { owner: "infotradescout", repo: "tradescoutAI", product: "tradescout" },
+  { owner: "infotradescout", repo: "MealScout", product: "mealscout" },
+];
+
+const GENERATED_POSTS_URLS = [
+  "https://raw.githubusercontent.com/infotradescout/tradescout-changelog/main/client/src/lib/generated-posts.json",
+  "https://cdn.jsdelivr.net/gh/infotradescout/tradescout-changelog@main/client/src/lib/generated-posts.json",
+];
+
+function normalizeCommitTitle(message: string) {
+  const firstLine = message.split("\n")[0]?.trim() ?? "";
+  const cleaned = firstLine
+    .replace(/^(feat|fix|chore|docs|refactor|perf|test|style|ci|build|revert)(\([^)]+\))?:\s*/i, "")
+    .replace(/^(feat|fix|chore|docs|refactor|perf|test|style|ci|build|revert):\s*/i, "")
+    .trim();
+
+  if (!cleaned) return "Commit update";
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function detectCategoryFromMessage(message: string): UpdateCategory {
+  const lower = message.toLowerCase();
+  if (/\bfeat\b|feature|add\b|new\b|launch|ship|implement/.test(lower)) return "feature";
+  if (/\bfix\b|bug|patch|resolve|repair|hotfix/.test(lower)) return "fix";
+  if (/\bseo\b|sitemap|crawl|robots|schema|meta|canonical|og:/.test(lower)) return "seo";
+  return "improvement";
+}
+
+function mergePostsWithFallback(generatedPosts: Post[]): Post[] {
+  const merged = [
+    ...generatedPosts,
+    ...POSTS.filter((p) => !generatedPosts.some((g) => g.id === p.id)),
+  ];
+
+  return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function isPost(value: unknown): value is Post {
+  if (!value || typeof value !== "object") return false;
+  const post = value as Partial<Post>;
+  return (
+    typeof post.id === "string" &&
+    (post.product === "tradescout" || post.product === "mealscout") &&
+    (post.type === "daily" || post.type === "weekly") &&
+    typeof post.title === "string" &&
+    typeof post.summary === "string" &&
+    typeof post.date === "string" &&
+    typeof post.commitCount === "number" &&
+    Array.isArray(post.updates)
+  );
+}
+
+async function fetchRemoteGeneratedPosts(): Promise<Post[] | null> {
+  for (const url of GENERATED_POSTS_URLS) {
+    try {
+      const response = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as unknown;
+      if (!Array.isArray(payload)) continue;
+      const validPosts = payload.filter(isPost);
+      return mergePostsWithFallback(validPosts);
+    } catch {
+      // Try the next mirror URL.
+    }
+  }
+
+  return null;
+}
+
+async function fetchRepoCommits(source: RepoCommitSource): Promise<LiveCommitEvent[]> {
+  const url = `https://api.github.com/repos/${source.owner}/${source.repo}/commits?per_page=30`;
+  const response = await fetch(url, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Unable to fetch ${source.owner}/${source.repo}: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as Array<{
+    sha: string;
+    html_url: string;
+    commit: { message: string; author?: { date?: string } };
+  }>;
+
+  return payload.map((item) => {
+    const message = item.commit?.message ?? "Commit update";
+    const lines = message.split("\n");
+
+    return {
+      id: item.sha,
+      sha: item.sha,
+      product: source.product,
+      repo: source.repo,
+      title: normalizeCommitTitle(message),
+      description: lines.slice(1).join(" ").trim(),
+      category: detectCategoryFromMessage(message),
+      date: item.commit?.author?.date ?? new Date().toISOString(),
+      url: item.html_url,
+    };
+  });
+}
 
 function DeepDiveLists({ posts }: { posts: Post[] }) {
   const [activeList, setActiveList] = useState<DeepDiveListType>("all");
@@ -1037,15 +1161,89 @@ export default function Home() {
   const [activeProduct, setActiveProduct] = useState<Product | "all">("all");
   const [activeType, setActiveType] = useState<PostType | "all">("all");
   const [isLiveFeed, setIsLiveFeed] = useState(false);
+  const [remotePosts, setRemotePosts] = useState<Post[] | null>(null);
+  const [liveCommits, setLiveCommits] = useState<LiveCommitEvent[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const syncSnapshots = async () => {
+      const nextPosts = await fetchRemoteGeneratedPosts();
+      if (mounted && nextPosts) {
+        setRemotePosts(nextPosts);
+      }
+    };
+
+    void syncSnapshots();
+    const interval = window.setInterval(syncSnapshots, SNAPSHOT_SYNC_MS);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        void syncSnapshots();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLiveFeed) return;
+
+    let mounted = true;
+
+    const syncLiveCommits = async () => {
+      try {
+        const all = await Promise.all(LIVE_REPOS.map(fetchRepoCommits));
+        const deduped = Array.from(new Map(all.flat().map((commit) => [commit.sha, commit])).values());
+        deduped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (mounted) {
+          setLiveCommits(deduped);
+        }
+      } catch {
+        // Keep the previous successful commit feed when polling fails.
+      }
+    };
+
+    void syncLiveCommits();
+    const interval = window.setInterval(syncLiveCommits, LIVE_COMMIT_SYNC_MS);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        void syncLiveCommits();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [isLiveFeed]);
+
+  const allPosts = useMemo(
+    () => remotePosts ?? getFilteredPosts({ product: "all", type: "all" }),
+    [remotePosts]
+  );
 
   const snapshotPosts = useMemo(
-    () => getFilteredPosts({ product: activeProduct, type: activeType }),
-    [activeProduct, activeType]
+    () =>
+      allPosts
+        .filter((p) => (activeProduct === "all" ? true : p.product === activeProduct))
+        .filter((p) => (activeType === "all" ? true : p.type === activeType)),
+    [activeProduct, activeType, allPosts]
   );
 
   const liveSourcePosts = useMemo(
-    () => getFilteredPosts({ product: activeProduct, type: "all" }),
-    [activeProduct]
+    () => allPosts.filter((p) => (activeProduct === "all" ? true : p.product === activeProduct)),
+    [activeProduct, allPosts]
   );
 
   const posts = isLiveFeed ? liveSourcePosts : snapshotPosts;
@@ -1067,6 +1265,11 @@ export default function Home() {
     [liveSourcePosts]
   );
 
+  const filteredLiveCommits = useMemo(
+    () => liveCommits.filter((commit) => (activeProduct === "all" ? true : commit.product === activeProduct)),
+    [activeProduct, liveCommits]
+  );
+
   const dailySnapshotPosts = useMemo(
     () => snapshotPosts.filter((p) => p.type === "daily"),
     [snapshotPosts]
@@ -1077,7 +1280,7 @@ export default function Home() {
     [snapshotPosts]
   );
 
-  const latestId = getFilteredPosts({ product: "all", type: "all" })[0]?.id;
+  const latestId = allPosts[0]?.id;
 
   return (
     <div className="min-h-screen grid-bg" style={{ background: "var(--ts-bg)" }}>
@@ -1169,8 +1372,8 @@ export default function Home() {
                 </p>
                 <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
                   {isLiveFeed
-                    ? `Showing ${liveCommitRows.length} commit entries in chronological feed order.`
-                    : `Showing ${dailySnapshotPosts.length} daily and ${weeklySnapshotPosts.length} weekly snapshots.`}
+                    ? `Showing ${filteredLiveCommits.length || liveCommitRows.length} recent commits. Refreshes every 3 minutes.`
+                    : `Showing ${dailySnapshotPosts.length} daily and ${weeklySnapshotPosts.length} weekly snapshots. Refreshes every 5 minutes.`}
                 </p>
               </div>
               <button
@@ -1247,49 +1450,92 @@ export default function Home() {
                     </h2>
                   </div>
                   <span className="text-[11px] font-mono px-2.5 py-1 rounded" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>
-                    {liveCommitRows.length} total
+                    {filteredLiveCommits.length || liveCommitRows.length} total
                   </span>
                 </div>
 
-                {liveCommitRows.length === 0 ? (
+                {(filteredLiveCommits.length === 0 && liveCommitRows.length === 0) ? (
                   <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
                     No commit events matched this filter.
                   </p>
                 ) : (
                   <div className="space-y-2.5">
-                    {liveCommitRows.map((row) => (
-                      <article
-                        key={row.id}
-                        className="rounded-lg p-3"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <ProductBadge product={row.product} />
-                            <TypeBadge type={row.postType} />
-                            <CategoryTag category={row.category} />
-                          </div>
-                          <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
-                            {new Date(row.postDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
-                          {row.title}
-                        </p>
-                        {row.description && (
-                          <p className="text-xs leading-relaxed mb-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
-                            {row.description}
-                          </p>
-                        )}
-                        <p className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
-                          Source: {row.postTitle}
-                        </p>
-                      </article>
-                    ))}
+                    {(filteredLiveCommits.length > 0
+                      ? filteredLiveCommits.map((commit) => (
+                          <article
+                            key={commit.id}
+                            className="rounded-lg p-3"
+                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <ProductBadge product={commit.product} />
+                                <CategoryTag category={commit.category} />
+                                <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)" }}>
+                                  {commit.repo}
+                                </span>
+                              </div>
+                              <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                {new Date(commit.date).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
+                              {commit.title}
+                            </p>
+                            {commit.description && (
+                              <p className="text-xs leading-relaxed mb-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+                                {commit.description}
+                              </p>
+                            )}
+                            <a
+                              href={commit.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-mono transition-colors"
+                              style={{ color: "rgba(74,222,128,0.9)" }}
+                            >
+                              View commit {commit.sha.slice(0, 7)} ↗
+                            </a>
+                          </article>
+                        ))
+                      : liveCommitRows.map((row) => (
+                          <article
+                            key={row.id}
+                            className="rounded-lg p-3"
+                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <ProductBadge product={row.product} />
+                                <TypeBadge type={row.postType} />
+                                <CategoryTag category={row.category} />
+                              </div>
+                              <span className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                {new Date(row.postDate).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.88)" }}>
+                              {row.title}
+                            </p>
+                            {row.description && (
+                              <p className="text-xs leading-relaxed mb-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                                {row.description}
+                              </p>
+                            )}
+                            <p className="text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              Source: {row.postTitle}
+                            </p>
+                          </article>
+                        )))
+                    }
                   </div>
                 )}
               </section>
