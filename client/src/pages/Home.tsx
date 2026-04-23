@@ -1265,10 +1265,7 @@ export default function Home() {
     [liveSourcePosts]
   );
 
-  const filteredLiveCommits = useMemo(
-    () => liveCommits.filter((commit) => (activeProduct === "all" ? true : commit.product === activeProduct)),
-    [activeProduct, liveCommits]
-  );
+  const filteredLiveCommits = useMemo(() => liveCommits, [liveCommits]);
 
   const dailySnapshotPosts = useMemo(
     () => snapshotPosts.filter((p) => p.type === "daily"),
@@ -1380,7 +1377,10 @@ export default function Home() {
                 onClick={() => {
                   const next = !isLiveFeed;
                   setIsLiveFeed(next);
-                  if (next) setActiveType("all");
+                  if (next) {
+                    setActiveType("all");
+                    setActiveProduct("all");
+                  }
                 }}
                 className="shrink-0 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all"
                 style={{
