@@ -5,6 +5,14 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
+      "source": "/tradescout",
+      "destination": "/tradescout.html"
+    },
+    {
+      "source": "/mealscout",
+      "destination": "/mealscout.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
