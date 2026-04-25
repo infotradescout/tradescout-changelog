@@ -806,23 +806,214 @@ function SuggestionForm() {
   );
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatExportDate(date: string) {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function buildNewsletterSubject(post: Post) {
+  const productName = post.product === "tradescout" ? "TradeScout" : "MealScout";
+  return `${productName} Weekly Snapshot - ${formatExportDate(post.date)}`;
+}
+
+function buildNewsletterText(post: Post) {
+  const productName = post.product === "tradescout" ? "TradeScout" : "MealScout";
+  const updates = post.updates
+    .map((update) => {
+      const label = update.category.charAt(0).toUpperCase() + update.category.slice(1);
+      const description = update.description ? `\n${update.description}` : "";
+      return `- [${label}] ${update.title}${description}`;
+    })
+    .join("\n\n");
+
+  return `${buildNewsletterSubject(post)}\n\n${post.summary}\n\n${updates}`;
+}
+
+function buildNewsletterHtml(post: Post) {
+  const productName = post.product === "tradescout" ? "TradeScout" : "MealScout";
+  const accent = post.product === "tradescout" ? "#f97316" : "#ff4d2e";
+  const updates = post.updates
+    .map((update) => {
+      const label = update.category.charAt(0).toUpperCase() + update.category.slice(1);
+      const detail = update.description
+        ? `<p style=\"margin:6px 0 0; font-size:14px; line-height:1.5; color:#334155;\">${escapeHtml(update.description)}</p>`
+        : "";
+
+      return `<tr><td style=\"padding:0 0 16px;\"><div style=\"display:inline-block; background:${accent}1A; color:${accent}; border:1px solid ${accent}4D; border-radius:999px; font-family:Arial,sans-serif; font-size:11px; font-weight:700; padding:4px 9px; margin-bottom:8px;\">${escapeHtml(label)}</div><p style=\"margin:0; font-size:16px; line-height:1.4; color:#0f172a; font-weight:700;\">${escapeHtml(update.title)}</p>${detail}</td></tr>`;
+    })
+    .join("");
+
+  return `<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>${escapeHtml(buildNewsletterSubject(post))}</title></head><body style=\"margin:0; padding:24px; background:#f8fafc;\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:720px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;\"><tr><td style=\"padding:24px 28px; background:#0f172a;\"><p style=\"margin:0; color:${accent}; font-family:Arial,sans-serif; font-weight:700; letter-spacing:1px; font-size:11px; text-transform:uppercase;\">Weekly Snapshot</p><h1 style=\"margin:8px 0 0; font-family:Arial,sans-serif; font-size:28px; line-height:1.2; color:#f8fafc;\">${escapeHtml(productName)}</h1><p style=\"margin:8px 0 0; font-family:Arial,sans-serif; font-size:13px; color:#cbd5e1;\">${escapeHtml(formatExportDate(post.date))}</p></td></tr><tr><td style=\"padding:24px 28px 12px;\"><p style=\"margin:0; font-family:Arial,sans-serif; color:#334155; font-size:15px; line-height:1.65;\">${escapeHtml(post.summary)}</p></td></tr><tr><td style=\"padding:0 28px 8px;\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">${updates}</table></td></tr><tr><td style=\"padding:0 28px 24px;\"><div style=\"font-family:Arial,sans-serif; font-size:12px; color:#64748b; border-top:1px solid #e2e8f0; padding-top:14px;\">Generated from TradeScout Info weekly snapshot exports for CRM newsletters.</div></td></tr></table></body></html>`;
+}
+
+function downloadExportFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function NewsletterExportPanel({ posts, forcedProduct }: { posts: Post[]; forcedProduct?: Product }) {
+  const [status, setStatus] = useState<string>("");
+
+  const targets = useMemo(() => {
+    const products = forcedProduct
+      ? [forcedProduct]
+      : (["tradescout", "mealscout"] as const);
+
+    return products
+      .map((product) => {
+        const latestWeekly = posts
+          .filter((post) => post.product === product && post.type === "weekly")
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+        return latestWeekly ? { product, post: latestWeekly } : null;
+      })
+      .filter((item): item is { product: Product; post: Post } => item !== null);
+  }, [forcedProduct, posts]);
+
+  const exportLabel = (product: Product) => (product === "tradescout" ? "TradeScout" : "MealScout");
+
+  const handleCopyHtml = async (post: Post) => {
+    try {
+      await navigator.clipboard.writeText(buildNewsletterHtml(post));
+      setStatus(`${exportLabel(post.product)} HTML copied for CRM paste.`);
+    } catch {
+      setStatus("Clipboard blocked. Use Download HTML instead.");
+    }
+  };
+
+  const handleDownloadHtml = (post: Post) => {
+    const name = `${post.product}-weekly-${post.date}.html`;
+    downloadExportFile(name, buildNewsletterHtml(post), "text/html;charset=utf-8");
+    setStatus(`${exportLabel(post.product)} HTML downloaded.`);
+  };
+
+  const handleDownloadText = (post: Post) => {
+    const name = `${post.product}-weekly-${post.date}.txt`;
+    downloadExportFile(name, buildNewsletterText(post), "text/plain;charset=utf-8");
+    setStatus(`${exportLabel(post.product)} plain text downloaded.`);
+  };
+
+  if (targets.length === 0) {
+    return null;
+  }
+
+  return (
+    <section
+      className="rounded-2xl p-4 sm:p-5"
+      style={{ background: "var(--ts-surface)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="mb-4">
+        <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+          CRM Newsletter Export
+        </p>
+        <h2 className="text-lg sm:text-xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "rgba(255,255,255,0.95)" }}>
+          Export latest weekly snapshots as ready-to-send newsletters
+        </h2>
+        <p className="text-xs sm:text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+          Use Copy HTML for CRM editors or download HTML/TXT assets for campaigns.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {targets.map(({ product, post }) => (
+          <article
+            key={product}
+            className="rounded-xl p-3.5"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+              <div>
+                <p className="text-sm font-semibold" style={{ color: product === "tradescout" ? "#f97316" : "#ff4d2e" }}>
+                  {exportLabel(product)} Weekly Snapshot
+                </p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.42)" }}>
+                  {formatExportDate(post.date)} • {post.commitCount} commits • {post.updates.length} updates
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => void handleCopyHtml(post)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "rgba(56,189,248,0.14)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.26)" }}
+                >
+                  Copy HTML
+                </button>
+                <button
+                  onClick={() => handleDownloadHtml(post)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "rgba(249,115,22,0.14)", color: "#f97316", border: "1px solid rgba(249,115,22,0.26)" }}
+                >
+                  Download HTML
+                </button>
+                <button
+                  onClick={() => handleDownloadText(post)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.16)" }}
+                >
+                  Download TXT
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {status && (
+        <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.56)" }}>
+          {status}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // ── Sidebar nav ───────────────────────────────────────────
 function Sidebar({
   activeProduct,
   activeType,
+  lockedProduct,
   onProduct,
   onType,
 }: {
   activeProduct: Product | "all";
   activeType: PostType | "all";
+  lockedProduct?: Product;
   onProduct: (p: Product | "all") => void;
   onType: (t: PostType | "all") => void;
 }) {
-  const productFilters: { value: Product | "all"; label: string; logo?: string; color: string }[] = [
-    { value: "all", label: "All Products", color: "rgba(255,255,255,0.6)" },
-    { value: "tradescout", label: "TradeScout", logo: TS_LOGO, color: "#f97316" },
-    { value: "mealscout", label: "MealScout", logo: MS_LOGO, color: "#ff4d2e" },
-  ];
+  const productFilters: { value: Product | "all"; label: string; logo?: string; color: string }[] = lockedProduct
+    ? [
+        {
+          value: lockedProduct,
+          label: lockedProduct === "tradescout" ? "TradeScout" : "MealScout",
+          logo: lockedProduct === "tradescout" ? TS_LOGO : MS_LOGO,
+          color: lockedProduct === "tradescout" ? "#f97316" : "#ff4d2e",
+        },
+      ]
+    : [
+        { value: "all", label: "All Products", color: "rgba(255,255,255,0.6)" },
+        { value: "tradescout", label: "TradeScout", logo: TS_LOGO, color: "#f97316" },
+        { value: "mealscout", label: "MealScout", logo: MS_LOGO, color: "#ff4d2e" },
+      ];
 
   const typeFilters: { value: PostType | "all"; label: string }[] = [
     { value: "all", label: "All Posts" },
@@ -845,12 +1036,17 @@ function Sidebar({
             {productFilters.map((f) => (
               <button
                 key={f.value}
-                onClick={() => onProduct(f.value)}
+                onClick={() => {
+                  if (!lockedProduct) {
+                    onProduct(f.value);
+                  }
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all text-left"
                 style={{
                   background: activeProduct === f.value ? "rgba(255,255,255,0.06)" : "transparent",
                   color: activeProduct === f.value ? f.color : "rgba(255,255,255,0.5)",
                   fontWeight: activeProduct === f.value ? 600 : 400,
+                  cursor: lockedProduct ? "default" : "pointer",
                 }}
               >
                 {f.logo && (
@@ -1107,19 +1303,25 @@ function StatsPanel() {
 function MobileFilters({
   activeProduct,
   activeType,
+  lockedProduct,
   isLiveFeed,
   onProduct,
   onType,
 }: {
   activeProduct: Product | "all";
   activeType: PostType | "all";
+  lockedProduct?: Product;
   isLiveFeed: boolean;
   onProduct: (p: Product | "all") => void;
   onType: (t: PostType | "all") => void;
 }) {
+  const productTabs = lockedProduct
+    ? ([lockedProduct] as const)
+    : (["all", "tradescout", "mealscout"] as const);
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 lg:hidden">
-      {(["all", "tradescout", "mealscout"] as const).map((p) => (
+      {productTabs.map((p) => (
         <button
           key={p}
           onClick={() => onProduct(p)}
@@ -1157,12 +1359,18 @@ function MobileFilters({
 }
 
 // ── Main page ─────────────────────────────────────────────
-export default function Home() {
-  const [activeProduct, setActiveProduct] = useState<Product | "all">("all");
+export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
+  const [activeProduct, setActiveProduct] = useState<Product | "all">(forcedProduct ?? "all");
   const [activeType, setActiveType] = useState<PostType | "all">("all");
   const [isLiveFeed, setIsLiveFeed] = useState(false);
   const [remotePosts, setRemotePosts] = useState<Post[] | null>(null);
   const [liveCommits, setLiveCommits] = useState<LiveCommitEvent[]>([]);
+
+  useEffect(() => {
+    if (forcedProduct) {
+      setActiveProduct(forcedProduct);
+    }
+  }, [forcedProduct]);
 
   useEffect(() => {
     let mounted = true;
@@ -1358,6 +1566,41 @@ export default function Home() {
           <p className="text-sm max-w-xl" style={{ color: "rgba(255,255,255,0.5)" }}>
             Toggle between true live commit flow and the daily/weekly snapshots. Snapshot mode is optimized for high-level visibility.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href="/"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{
+                background: !forcedProduct ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+                color: !forcedProduct ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.62)",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+            >
+              Combined Feed
+            </a>
+            <a
+              href="/tradescout"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{
+                background: forcedProduct === "tradescout" ? "rgba(249,115,22,0.16)" : "rgba(249,115,22,0.08)",
+                color: "#f97316",
+                border: "1px solid rgba(249,115,22,0.25)",
+              }}
+            >
+              TradeScout Only
+            </a>
+            <a
+              href="/mealscout"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{
+                background: forcedProduct === "mealscout" ? "rgba(255,77,46,0.16)" : "rgba(255,77,46,0.08)",
+                color: "#ff4d2e",
+                border: "1px solid rgba(255,77,46,0.25)",
+              }}
+            >
+              MealScout Only
+            </a>
+          </div>
           <div className="mt-4 max-w-2xl rounded-xl p-3 sm:p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -1379,7 +1622,7 @@ export default function Home() {
                   setIsLiveFeed(next);
                   if (next) {
                     setActiveType("all");
-                    setActiveProduct("all");
+                    setActiveProduct(forcedProduct ?? "all");
                   }
                 }}
                 className="shrink-0 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all"
@@ -1402,10 +1645,15 @@ export default function Home() {
         <MobileFilters
           activeProduct={activeProduct}
           activeType={activeType}
+          lockedProduct={forcedProduct}
           isLiveFeed={isLiveFeed}
           onProduct={setActiveProduct}
           onType={setActiveType}
         />
+
+        <div className="mt-4">
+          <NewsletterExportPanel posts={allPosts} forcedProduct={forcedProduct} />
+        </div>
 
         <div className="mt-4">
           <AllTimeUpdate />
@@ -1420,6 +1668,7 @@ export default function Home() {
           <Sidebar
             activeProduct={activeProduct}
             activeType={activeType}
+            lockedProduct={forcedProduct}
             onProduct={setActiveProduct}
             onType={setActiveType}
           />
