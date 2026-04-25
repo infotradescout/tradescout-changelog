@@ -303,6 +303,7 @@ type LiveCommitEvent = {
 
 const SNAPSHOT_SYNC_MS = 5 * 60 * 1000;
 const LIVE_COMMIT_SYNC_MS = 3 * 60 * 1000;
+const SNAPSHOT_LOOKBACK_DAYS = 8;
 
 const LIVE_REPOS: RepoCommitSource[] = [
   { owner: "infotradescout", repo: "tradescoutAI", product: "tradescout" },
@@ -374,8 +375,18 @@ async function fetchRemoteGeneratedPosts(): Promise<Post[] | null> {
   return null;
 }
 
-async function fetchRepoCommits(source: RepoCommitSource): Promise<LiveCommitEvent[]> {
-  const url = `https://api.github.com/repos/${source.owner}/${source.repo}/commits?per_page=30`;
+async function fetchRepoCommits(
+  source: RepoCommitSource,
+  options?: { since?: string; perPage?: number }
+): Promise<LiveCommitEvent[]> {
+  const params = new URLSearchParams({
+    per_page: String(options?.perPage ?? 30),
+  });
+  if (options?.since) {
+    params.set("since", options.since);
+  }
+
+  const url = `https://api.github.com/repos/${source.owner}/${source.repo}/commits?${params.toString()}`;
   const response = await fetch(url, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
 
   if (!response.ok) {
@@ -404,6 +415,102 @@ async function fetchRepoCommits(source: RepoCommitSource): Promise<LiveCommitEve
       url: item.html_url,
     };
   });
+}
+
+function buildSnapshotSummary(events: LiveCommitEvent[]) {
+  const featureCount = events.filter((e) => e.category === "feature").length;
+  const fixCount = events.filter((e) => e.category === "fix").length;
+  const seoCount = events.filter((e) => e.category === "seo").length;
+  const improvementCount = events.filter((e) => e.category === "improvement").length;
+
+  const parts: string[] = [];
+  if (featureCount > 0) parts.push(`${featureCount} new feature${featureCount > 1 ? "s" : ""}`);
+  if (fixCount > 0) parts.push(`${fixCount} fix${fixCount > 1 ? "es" : ""}`);
+  if (seoCount > 0) parts.push(`${seoCount} SEO update${seoCount > 1 ? "s" : ""}`);
+  if (improvementCount > 0) parts.push(`${improvementCount} improvement${improvementCount > 1 ? "s" : ""}`);
+
+  if (parts.length === 0) {
+    return "No commits in this period.";
+  }
+
+  return `${events.length} commit${events.length !== 1 ? "s" : ""} shipped: ${parts.join(", ")}.`;
+}
+
+function buildSyntheticSnapshotPosts(events: LiveCommitEvent[], now = new Date()): Post[] {
+  const dailySince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const weeklySince = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const dateStr = now.toISOString().split("T")[0];
+
+  const products: Product[] = ["tradescout", "mealscout"];
+  const posts: Post[] = [];
+
+  for (const product of products) {
+    const productLabel = product === "tradescout" ? "TradeScout" : "MealScout";
+    const scoped = events
+      .filter((event) => event.product === product)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const dailyEvents = scoped.filter((event) => new Date(event.date) >= dailySince);
+    if (dailyEvents.length > 0) {
+      posts.push({
+        id: `${product}-daily-${dateStr}`,
+        product,
+        type: "daily",
+        title: `${productLabel} Daily - ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+        summary: buildSnapshotSummary(dailyEvents),
+        date: dateStr,
+        commitCount: dailyEvents.length,
+        updates: dailyEvents.map((event, index) => ({
+          id: `live-d-${index}-${event.sha.slice(0, 7)}`,
+          category: event.category,
+          title: event.title,
+          description: event.description,
+        })),
+      });
+    }
+
+    const weeklyEvents = scoped.filter((event) => new Date(event.date) >= weeklySince);
+    if (weeklyEvents.length > 0) {
+      posts.push({
+        id: `${product}-weekly-${dateStr}`,
+        product,
+        type: "weekly",
+        title: `${productLabel} Weekly Digest - ${weeklySince.toLocaleDateString("en-US", { month: "short", day: "numeric" })}-${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+        summary: buildSnapshotSummary(weeklyEvents),
+        date: dateStr,
+        commitCount: weeklyEvents.length,
+        updates: weeklyEvents.map((event, index) => ({
+          id: `live-w-${index}-${event.sha.slice(0, 7)}`,
+          category: event.category,
+          title: event.title,
+          description: event.description,
+        })),
+      });
+    }
+  }
+
+  return posts;
+}
+
+function mergeRuntimePosts(primary: Post[], fallback: Post[]) {
+  const byId = new Map<string, Post>();
+
+  for (const post of [...primary, ...fallback]) {
+    if (!byId.has(post.id)) {
+      byId.set(post.id, post);
+    }
+  }
+
+  return Array.from(byId.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+async function fetchLiveSnapshotPosts(): Promise<Post[]> {
+  const since = new Date(Date.now() - SNAPSHOT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const commits = await Promise.all(
+    LIVE_REPOS.map((repo) => fetchRepoCommits(repo, { since, perPage: 100 }))
+  );
+
+  return buildSyntheticSnapshotPosts(commits.flat());
 }
 
 function DeepDiveLists({ posts }: { posts: Post[] }) {
@@ -1365,6 +1472,7 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
   const [isLiveFeed, setIsLiveFeed] = useState(false);
   const [remotePosts, setRemotePosts] = useState<Post[] | null>(null);
   const [liveCommits, setLiveCommits] = useState<LiveCommitEvent[]>([]);
+  const [showOwnerTools, setShowOwnerTools] = useState(false);
 
   useEffect(() => {
     if (forcedProduct) {
@@ -1373,12 +1481,39 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
   }, [forcedProduct]);
 
   useEffect(() => {
+    const syncOwnerToolVisibility = () => {
+      const params = new URLSearchParams(window.location.search);
+      setShowOwnerTools(params.get("owner") === "1");
+    };
+
+    syncOwnerToolVisibility();
+    window.addEventListener("popstate", syncOwnerToolVisibility);
+    return () => {
+      window.removeEventListener("popstate", syncOwnerToolVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     const syncSnapshots = async () => {
-      const nextPosts = await fetchRemoteGeneratedPosts();
-      if (mounted && nextPosts) {
-        setRemotePosts(nextPosts);
+      try {
+        const [remote, liveSnapshots] = await Promise.all([
+          fetchRemoteGeneratedPosts(),
+          fetchLiveSnapshotPosts(),
+        ]);
+
+        const fallback = remote ?? getFilteredPosts({ product: "all", type: "all" });
+        const merged = mergeRuntimePosts(liveSnapshots, fallback);
+
+        if (mounted) {
+          setRemotePosts(merged);
+        }
+      } catch {
+        if (mounted) {
+          const fallback = (await fetchRemoteGeneratedPosts()) ?? getFilteredPosts({ product: "all", type: "all" });
+          setRemotePosts(fallback);
+        }
       }
     };
 
@@ -1652,10 +1787,6 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
         />
 
         <div className="mt-4">
-          <NewsletterExportPanel posts={allPosts} forcedProduct={forcedProduct} />
-        </div>
-
-        <div className="mt-4">
           <AllTimeUpdate />
         </div>
 
@@ -1850,6 +1981,12 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
                   </div>
                 </section>
               </>
+            )}
+
+            {showOwnerTools && (
+              <div id="owner-tools" className="pt-2">
+                <NewsletterExportPanel posts={allPosts} forcedProduct={forcedProduct} />
+              </div>
             )}
 
             {/* Suggestion / Error report form — always visible below feed */}
