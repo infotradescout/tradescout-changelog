@@ -301,6 +301,13 @@ type LiveCommitEvent = {
   url: string;
 };
 
+type AppVersionInfo = {
+  sha: string;
+  date: string;
+  url: string;
+  repo: string;
+};
+
 const SNAPSHOT_SYNC_MS = 5 * 60 * 1000;
 const LIVE_COMMIT_SYNC_MS = 3 * 60 * 1000;
 const SNAPSHOT_LOOKBACK_DAYS = 8;
@@ -314,6 +321,16 @@ const GENERATED_POSTS_URLS = [
   "https://raw.githubusercontent.com/infotradescout/tradescout-changelog/main/client/src/lib/generated-posts.json",
   "https://cdn.jsdelivr.net/gh/infotradescout/tradescout-changelog@main/client/src/lib/generated-posts.json",
 ];
+
+const RELEASE_VERSION_OVERRIDES: Partial<Record<Product, { version: string; note?: string }>> = {
+  tradescout: {
+    version: "1.7.x",
+  },
+  mealscout: {
+    version: "2.0",
+    note: "Online ordering + autofill profiles",
+  },
+};
 
 function normalizeCommitTitle(message: string) {
   const firstLine = message.split("\n")[0]?.trim() ?? "";
@@ -511,6 +528,35 @@ async function fetchLiveSnapshotPosts(): Promise<Post[]> {
   );
 
   return buildSyntheticSnapshotPosts(commits.flat());
+}
+
+async function fetchAppVersions(): Promise<Partial<Record<Product, AppVersionInfo>>> {
+  const latest = await Promise.all(
+    LIVE_REPOS.map(async (repo) => {
+      const commits = await fetchRepoCommits(repo, { perPage: 1 });
+      const commit = commits[0];
+      if (!commit) return null;
+
+      return {
+        product: repo.product,
+        info: {
+          sha: commit.sha,
+          date: commit.date,
+          url: commit.url,
+          repo: repo.repo,
+        },
+      } as const;
+    })
+  );
+
+  const versions: Partial<Record<Product, AppVersionInfo>> = {};
+  for (const item of latest) {
+    if (item) {
+      versions[item.product] = item.info;
+    }
+  }
+
+  return versions;
 }
 
 function DeepDiveLists({ posts }: { posts: Post[] }) {
@@ -1472,6 +1518,7 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
   const [isLiveFeed, setIsLiveFeed] = useState(false);
   const [remotePosts, setRemotePosts] = useState<Post[] | null>(null);
   const [liveCommits, setLiveCommits] = useState<LiveCommitEvent[]>([]);
+  const [appVersions, setAppVersions] = useState<Partial<Record<Product, AppVersionInfo>>>({});
   const [showOwnerTools, setShowOwnerTools] = useState(false);
 
   useEffect(() => {
@@ -1514,6 +1561,15 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
           const fallback = (await fetchRemoteGeneratedPosts()) ?? getFilteredPosts({ product: "all", type: "all" });
           setRemotePosts(fallback);
         }
+      }
+
+      try {
+        const versions = await fetchAppVersions();
+        if (mounted) {
+          setAppVersions(versions);
+        }
+      } catch {
+        // Keep last successful versions when fetch fails.
       }
     };
 
@@ -1621,6 +1677,7 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
   );
 
   const latestId = allPosts[0]?.id;
+  const versionProducts: Product[] = forcedProduct ? [forcedProduct] : ["tradescout", "mealscout"];
 
   return (
     <div className="min-h-screen grid-bg" style={{ background: "var(--ts-bg)" }}>
@@ -1735,6 +1792,60 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
             >
               MealScout Only
             </a>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            {versionProducts.map((product) => {
+              const isTS = product === "tradescout";
+              const version = appVersions[product];
+              const releaseOverride = RELEASE_VERSION_OVERRIDES[product];
+              const productLabel = isTS ? "TradeScout" : "MealScout";
+              const accent = isTS ? "#f97316" : "#ff4d2e";
+
+              return (
+                <a
+                  key={product}
+                  href={version?.url ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl px-3 py-2 text-xs"
+                  style={{
+                    background: isTS ? "rgba(249,115,22,0.08)" : "rgba(255,77,46,0.08)",
+                    border: isTS ? "1px solid rgba(249,115,22,0.24)" : "1px solid rgba(255,77,46,0.24)",
+                    color: "rgba(255,255,255,0.84)",
+                  }}
+                >
+                  <p className="font-semibold" style={{ color: accent }}>
+                    {productLabel} Version
+                  </p>
+                  <p className="font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.72)" }}>
+                    {releaseOverride
+                      ? `v${releaseOverride.version}`
+                      : version
+                      ? `v-${version.sha.slice(0, 7)}`
+                      : "loading..."}
+                  </p>
+                  {releaseOverride?.note && (
+                    <p className="mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {releaseOverride.note}
+                    </p>
+                  )}
+                  {version && (
+                    <p className="mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      Build {version.sha.slice(0, 7)} · {new Date(version.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
+                  {!version && (
+                    <p className="mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      Build metadata loading...
+                    </p>
+                  )}
+                </a>
+              );
+            })}
           </div>
           <div className="mt-4 max-w-2xl rounded-xl p-3 sm:p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
