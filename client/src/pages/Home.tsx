@@ -523,11 +523,15 @@ function mergeRuntimePosts(primary: Post[], fallback: Post[]) {
 
 async function fetchLiveSnapshotPosts(): Promise<Post[]> {
   const since = new Date(Date.now() - SNAPSHOT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const commits = await Promise.all(
+  const settled = await Promise.allSettled(
     LIVE_REPOS.map((repo) => fetchRepoCommits(repo, { since, perPage: 100 }))
   );
 
-  return buildSyntheticSnapshotPosts(commits.flat());
+  const commits = settled
+    .filter((result): result is PromiseFulfilledResult<LiveCommitEvent[]> => result.status === "fulfilled")
+    .flatMap((result) => result.value);
+
+  return buildSyntheticSnapshotPosts(commits);
 }
 
 async function fetchAppVersions(): Promise<Partial<Record<Product, AppVersionInfo>>> {
@@ -1544,23 +1548,21 @@ export default function Home({ forcedProduct }: { forcedProduct?: Product }) {
     let mounted = true;
 
     const syncSnapshots = async () => {
-      try {
-        const [remote, liveSnapshots] = await Promise.all([
-          fetchRemoteGeneratedPosts(),
-          fetchLiveSnapshotPosts(),
-        ]);
+      const [remoteResult, liveResult] = await Promise.allSettled([
+        fetchRemoteGeneratedPosts(),
+        fetchLiveSnapshotPosts(),
+      ]);
 
-        const fallback = remote ?? getFilteredPosts({ product: "all", type: "all" });
-        const merged = mergeRuntimePosts(liveSnapshots, fallback);
+      const remotePostsResult =
+        remoteResult.status === "fulfilled" ? remoteResult.value : null;
+      const liveSnapshots =
+        liveResult.status === "fulfilled" ? liveResult.value : [];
 
-        if (mounted) {
-          setRemotePosts(merged);
-        }
-      } catch {
-        if (mounted) {
-          const fallback = (await fetchRemoteGeneratedPosts()) ?? getFilteredPosts({ product: "all", type: "all" });
-          setRemotePosts(fallback);
-        }
+      const fallback = remotePostsResult ?? getFilteredPosts({ product: "all", type: "all" });
+      const merged = mergeRuntimePosts(liveSnapshots, fallback);
+
+      if (mounted) {
+        setRemotePosts(merged);
       }
 
       try {
